@@ -18,4 +18,4 @@ SendStuff is a simple MERN-based newsletter system that lets you collect emails 
 
 ## 📩 License
 
-GPLv3 — use it freely and send cool stuff.
+GPL-3.0 LICENSE — use it freely and send cool stuff.
