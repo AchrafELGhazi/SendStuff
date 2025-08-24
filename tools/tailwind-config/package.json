@@ -1,0 +1,9 @@
+{
+    "name": "@sendstuff/tailwind-config",
+    "version": "1.0.0",
+    "private": true,
+    "main": "index.js",
+    "dependencies": {
+        "tailwindcss": "^3.4.0"
+    }
+}

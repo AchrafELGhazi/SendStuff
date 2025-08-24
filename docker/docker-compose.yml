@@ -1,0 +1,48 @@
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sendstuff-postgres
+    environment:
+      POSTGRES_DB: sendstuff
+      POSTGRES_USER: sendstuff
+      POSTGRES_PASSWORD: sendstuff
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sendstuff
+
+  redis:
+    image: redis:7-alpine
+    container_name: sendstuff-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sendstuff
+
+  # Optional: Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sendstuff-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - sendstuff
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  sendstuff:
+    driver: bridge
