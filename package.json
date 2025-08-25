@@ -1,35 +1,20 @@
 {
-  "name": "sendstuff",
-  "version": "1.0.0",
+  "name": "SendStuff",
   "private": true,
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:web": "turbo run dev --filter=@sendstuff/web",
-    "dev:api": "turbo run dev --filter=@sendstuff/api",
-    "dev:worker": "turbo run dev --filter=@sendstuff/worker",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check",
-    "clean": "turbo run clean",
-    "test": "turbo run test",
-    "db:generate": "turbo run db:generate --filter=@sendstuff/database",
-    "db:push": "turbo run db:push --filter=@sendstuff/database",
-    "db:migrate": "turbo run db:migrate --filter=@sendstuff/database",
-    "db:seed": "turbo run db:seed --filter=@sendstuff/database",
-    "db:studio": "turbo run db:studio --filter=@sendstuff/database",
-    "db:reset": "turbo run db:reset --filter=@sendstuff/database",
-    "setup": "pnpm install && pnpm db:generate && pnpm build"
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "eslint": "^8.57.1",
-    "prettier": "^3.0.0",
+    "prettier": "^3.6.2",
     "turbo": "^2.5.6",
-    "typescript": "^5.3.0"
+    "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@8.10.0",
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
   }
 }
