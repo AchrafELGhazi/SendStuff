@@ -1,5 +1,5 @@
 {
-  "name": "SendStuff",
+  "name": "sendstuff",
   "private": true,
   "scripts": {
     "build": "turbo run build",
