@@ -1,0 +1,749 @@
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// AUTHENTICATION & USER MANAGEMENT
+// ================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model User {
+  id                String           @id @default(cuid())
+  email             String           @unique
+  emailVerified     DateTime?
+  password          String?
+  firstName         String?
+  lastName          String?
+  avatar            String?
+  phone             String?
+  timezone          String           @default("UTC")
+  language          String           @default("en")
+  status            UserStatus       @default(PENDING_VERIFICATION)
+  lastLoginAt       DateTime?
+  mfaEnabled        Boolean          @default(false)
+  mfaSecret         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Relations
+  organizationMembers OrganizationMember[]
+  newsletters         Newsletter[]
+  campaigns           Campaign[]
+  templates           Template[]
+  apiKeys             ApiKey[]
+  auditLogs           AuditLog[]
+  createdOrganizations Organization[] @relation("CreatedBy")
+
+  @@map("users")
+}
+
+model Organization {
+  id                String               @id @default(cuid())
+  name              String
+  slug              String               @unique
+  description       String?
+  logo              String?
+  website           String?
+  industry          String?
+  country           String?
+  timezone          String               @default("UTC")
+  settings          Json?                @default("{}")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  
+  // Foreign Keys
+  createdById       String
+  
+  // Relations
+  createdBy         User                 @relation("CreatedBy", fields: [createdById], references: [id])
+  members           OrganizationMember[]
+  newsletters       Newsletter[]
+  subscribers       Subscriber[]
+  campaigns         Campaign[]
+  templates         Template[]
+  segments          Segment[]
+  automations       Automation[]
+  integrations      Integration[]
+  billingPlan       BillingPlan?
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  role           UserRole     @default(VIEWER)
+  permissions    Json?        @default("[]")
+  invitedAt      DateTime?
+  joinedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Foreign Keys
+  userId         String
+  organizationId String
+  
+  // Relations
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  key         String    @unique
+  permissions Json?     @default("[]")
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Foreign Keys
+  userId      String
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+// ================================
+// NEWSLETTER & CONTENT MANAGEMENT
+// ================================
+
+enum NewsletterStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model Newsletter {
+  id                String            @id @default(cuid())
+  name              String
+  description       String?
+  slug              String
+  fromName          String
+  fromEmail         String
+  replyToEmail      String?
+  status            NewsletterStatus  @default(DRAFT)
+  settings          Json?             @default("{}")
+  brandingColors    Json?             @default("{}")
+  customDomain      String?
+  isPublic          Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Foreign Keys
+  userId            String
+  organizationId    String
+  
+  // Relations
+  user              User              @relation(fields: [userId], references: [id])
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscribers       NewsletterSubscriber[]
+  campaigns         Campaign[]
+  templates         Template[]
+  segments          Segment[]
+  automations       Automation[]
+
+  @@unique([organizationId, slug])
+  @@map("newsletters")
+}
+
+// ================================
+// SUBSCRIBER MANAGEMENT
+// ================================
+
+enum SubscriberStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+  SPAM_COMPLAINT
+  PENDING_CONFIRMATION
+}
+
+model Subscriber {
+  id                String                   @id @default(cuid())
+  email             String
+  firstName         String?
+  lastName          String?
+  phone             String?
+  country           String?
+  city              String?
+  customFields      Json?                    @default("{}")
+  source            String?                  // Where they signed up from
+  ipAddress         String?
+  userAgent         String?
+  confirmedAt       DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  
+  // Foreign Keys
+  organizationId    String
+  
+  // Relations
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  newsletters       NewsletterSubscriber[]
+  segmentMembers    SegmentMember[]
+  campaignRecipients CampaignRecipient[]
+  activities        SubscriberActivity[]
+
+  @@unique([organizationId, email])
+  @@map("subscribers")
+}
+
+model NewsletterSubscriber {
+  id                String            @id @default(cuid())
+  status            SubscriberStatus  @default(PENDING_CONFIRMATION)
+  preferences       Json?             @default("{}")
+  subscribedAt      DateTime?
+  unsubscribedAt    DateTime?
+  unsubscribeReason String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  // Foreign Keys
+  newsletterId      String
+  subscriberId      String
+  
+  // Relations
+  newsletter        Newsletter        @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  subscriber        Subscriber        @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([newsletterId, subscriberId])
+  @@map("newsletter_subscribers")
+}
+
+// ================================
+// SEGMENTATION
+// ================================
+
+enum SegmentType {
+  STATIC
+  DYNAMIC
+}
+
+model Segment {
+  id             String          @id @default(cuid())
+  name           String
+  description    String?
+  type           SegmentType     @default(DYNAMIC)
+  rules          Json?           @default("[]") // Segmentation rules
+  color          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Foreign Keys
+  newsletterId   String
+  organizationId String
+  
+  // Relations
+  newsletter     Newsletter      @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        SegmentMember[]
+  campaigns      Campaign[]
+
+  @@map("segments")
+}
+
+model SegmentMember {
+  id           String     @id @default(cuid())
+  addedAt      DateTime   @default(now())
+  
+  // Foreign Keys
+  segmentId    String
+  subscriberId String
+  
+  // Relations
+  segment      Segment    @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  subscriber   Subscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, subscriberId])
+  @@map("segment_members")
+}
+
+// ================================
+// CAMPAIGN MANAGEMENT
+// ================================
+
+enum CampaignType {
+  REGULAR
+  AUTOMATED
+  AB_TEST
+  DRIP_SEQUENCE
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELLED
+}
+
+model Campaign {
+  id                String              @id @default(cuid())
+  name              String
+  subject           String
+  preheader         String?
+  type              CampaignType        @default(REGULAR)
+  status            CampaignStatus      @default(DRAFT)
+  htmlContent       String?
+  textContent       String?
+  settings          Json?               @default("{}")
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Foreign Keys
+  userId            String
+  organizationId    String
+  newsletterId      String
+  segmentId         String?
+  templateId        String?
+  
+  // Relations
+  user              User                @relation(fields: [userId], references: [id])
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  newsletter        Newsletter          @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  segment           Segment?            @relation(fields: [segmentId], references: [id])
+  template          Template?           @relation(fields: [templateId], references: [id])
+  recipients        CampaignRecipient[]
+  analytics         CampaignAnalytics?
+  abTests           AbTest[]
+
+  @@map("campaigns")
+}
+
+model CampaignRecipient {
+  id                String               @id @default(cuid())
+  status            String               @default("pending") // pending, sent, failed, bounced
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  unsubscribedAt    DateTime?
+  bounceReason      String?
+  errorMessage      String?
+  createdAt         DateTime             @default(now())
+  
+  // Foreign Keys
+  campaignId        String
+  subscriberId      String
+  
+  // Relations
+  campaign          Campaign             @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber        Subscriber           @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  activities        SubscriberActivity[]
+
+  @@unique([campaignId, subscriberId])
+  @@map("campaign_recipients")
+}
+
+// ================================
+// TEMPLATE MANAGEMENT
+// ================================
+
+enum TemplateCategory {
+  NEWSLETTER
+  WELCOME
+  PROMOTIONAL
+  TRANSACTIONAL
+  EVENT
+  CUSTOM
+}
+
+model Template {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  category       TemplateCategory @default(CUSTOM)
+  thumbnail      String?
+  htmlContent    String
+  textContent    String?
+  variables      Json?            @default("[]")
+  isPublic       Boolean          @default(false)
+  usageCount     Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  // Foreign Keys
+  userId         String
+  organizationId String
+  newsletterId   String?
+  
+  // Relations
+  user           User             @relation(fields: [userId], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  newsletter     Newsletter?      @relation(fields: [newsletterId], references: [id])
+  campaigns      Campaign[]
+
+  @@map("templates")
+}
+
+// ================================
+// AUTOMATION & WORKFLOWS
+// ================================
+
+enum AutomationType {
+  WELCOME_SERIES
+  DRIP_CAMPAIGN
+  BEHAVIORAL_TRIGGER
+  ABANDONED_CART
+  RE_ENGAGEMENT
+  CUSTOM_WORKFLOW
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+  ARCHIVED
+}
+
+model Automation {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  type           AutomationType
+  status         AutomationStatus @default(DRAFT)
+  trigger        Json             @default("{}")
+  settings       Json?            @default("{}")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  // Foreign Keys
+  organizationId String
+  newsletterId   String
+  
+  // Relations
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  newsletter     Newsletter       @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  steps          AutomationStep[]
+  executions     AutomationExecution[]
+
+  @@map("automations")
+}
+
+enum AutomationStepType {
+  EMAIL
+  WAIT
+  CONDITION
+  ACTION
+}
+
+model AutomationStep {
+  id             String               @id @default(cuid())
+  name           String
+  type           AutomationStepType
+  order          Int
+  settings       Json                 @default("{}")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  
+  // Foreign Keys
+  automationId   String
+  
+  // Relations
+  automation     Automation           @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@map("automation_steps")
+}
+
+model AutomationExecution {
+  id             String    @id @default(cuid())
+  status         String    @default("pending") // pending, running, completed, failed
+  startedAt      DateTime?
+  completedAt    DateTime?
+  errorMessage   String?
+  data           Json?     @default("{}")
+  createdAt      DateTime  @default(now())
+  
+  // Foreign Keys
+  automationId   String
+  subscriberId   String
+  
+  // Relations
+  automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+
+  @@map("automation_executions")
+}
+
+// ================================
+// ANALYTICS & REPORTING
+// ================================
+
+model CampaignAnalytics {
+  id                   String   @id @default(cuid())
+  totalSent            Int      @default(0)
+  totalDelivered       Int      @default(0)
+  totalOpened          Int      @default(0)
+  totalClicked         Int      @default(0)
+  totalUnsubscribed    Int      @default(0)
+  totalBounced         Int      @default(0)
+  totalSpamComplaints  Int      @default(0)
+  openRate             Float    @default(0.0)
+  clickRate            Float    @default(0.0)
+  bounceRate           Float    @default(0.0)
+  unsubscribeRate      Float    @default(0.0)
+  revenue              Float?   @default(0.0)
+  lastCalculatedAt     DateTime @default(now())
+  
+  // Foreign Keys
+  campaignId           String   @unique
+  
+  // Relations
+  campaign             Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_analytics")
+}
+
+enum ActivityType {
+  EMAIL_SENT
+  EMAIL_DELIVERED
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  EMAIL_BOUNCED
+  EMAIL_UNSUBSCRIBED
+  SPAM_COMPLAINT
+  SUBSCRIPTION
+  UNSUBSCRIPTION
+}
+
+model SubscriberActivity {
+  id                    String               @id @default(cuid())
+  type                  ActivityType
+  data                  Json?                @default("{}")
+  ipAddress             String?
+  userAgent             String?
+  timestamp             DateTime             @default(now())
+  
+  // Foreign Keys
+  subscriberId          String
+  campaignRecipientId   String?
+  
+  // Relations
+  subscriber            Subscriber           @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  campaignRecipient     CampaignRecipient?   @relation(fields: [campaignRecipientId], references: [id])
+
+  @@map("subscriber_activities")
+}
+
+// ================================
+// A/B TESTING
+// ================================
+
+model AbTest {
+  id                String    @id @default(cuid())
+  name              String
+  type              String    // subject, content, send_time
+  variationA        Json      @default("{}")
+  variationB        Json      @default("{}")
+  splitPercent      Int       @default(50)
+  winningVariation  String?   // A or B
+  status            String    @default("running") // running, completed, cancelled
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime  @default(now())
+  
+  // Foreign Keys
+  campaignId        String
+  
+  // Relations
+  campaign          Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@map("ab_tests")
+}
+
+// ================================
+// INTEGRATIONS & WEBHOOKS
+// ================================
+
+model Integration {
+  id             String       @id @default(cuid())
+  name           String
+  type           String       // webhook, zapier, api
+  provider       String?      // mailchimp, hubspot, etc.
+  config         Json         @default("{}")
+  isActive       Boolean      @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  // Foreign Keys
+  organizationId String
+  
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  webhooks       Webhook[]
+
+  @@map("integrations")
+}
+
+model Webhook {
+  id             String      @id @default(cuid())
+  url            String
+  events         Json        @default("[]") // Array of event types
+  secret         String?
+  isActive       Boolean     @default(true)
+  lastTriggeredAt DateTime?
+  failureCount   Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Foreign Keys
+  integrationId  String
+  
+  // Relations
+  integration    Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  deliveries     WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id            String   @id @default(cuid())
+  event         String
+  payload       Json     @default("{}")
+  response      Json?    @default("{}")
+  status        String   @default("pending") // pending, success, failed
+  attempt       Int      @default(1)
+  deliveredAt   DateTime @default(now())
+  
+  // Foreign Keys
+  webhookId     String
+  
+  // Relations
+  webhook       Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_deliveries")
+}
+
+// ================================
+// BILLING & SUBSCRIPTIONS
+// ================================
+
+enum PlanType {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+model BillingPlan {
+  id                   String   @id @default(cuid())
+  name                 String
+  type                 PlanType
+  monthlyPrice         Float    @default(0.0)
+  yearlyPrice          Float    @default(0.0)
+  subscriberLimit      Int      @default(1000)
+  emailLimit           Int      @default(10000)
+  features             Json     @default("[]")
+  isActive             Boolean  @default(true)
+  trialDays            Int      @default(0)
+  stripeProductId      String?
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Foreign Keys
+  organizationId       String   @unique
+  
+  // Relations
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices             Invoice[]
+
+  @@map("billing_plans")
+}
+
+model Invoice {
+  id                String      @id @default(cuid())
+  invoiceNumber     String      @unique
+  status            String      @default("pending") // pending, paid, failed, refunded
+  amount            Float
+  currency          String      @default("USD")
+  dueDate           DateTime
+  paidAt            DateTime?
+  stripeInvoiceId   String?
+  createdAt         DateTime    @default(now())
+  
+  // Foreign Keys
+  billingPlanId     String
+  
+  // Relations
+  billingPlan       BillingPlan @relation(fields: [billingPlanId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+// ================================
+// SYSTEM & AUDIT
+// ================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPORT
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  action     AuditAction
+  resource   String      // table name or resource type
+  resourceId String?     // ID of the affected resource
+  oldValues  Json?       @default("{}")
+  newValues  Json?       @default("{}")
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime    @default(now())
+  
+  // Foreign Keys
+  userId     String
+  
+  // Relations
+  user       User        @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ================================
+// INDEXES FOR PERFORMANCE
+// ================================
+
+// Add indexes for common queries
+// These are handled by Prisma automatically for foreign keys and unique fields
+// Additional custom indexes can be added using @@index([field1, field2])w
