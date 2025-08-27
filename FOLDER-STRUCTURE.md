@@ -128,7 +128,7 @@ SendStuff/
 │       └── nodemon.json
 │
 ├── 📚 packages/                         # Shared packages
-│   ├── @repo/ui/                        # Shared UI components
+│   ├── @sendstuff/ui/                        # Shared UI components
 │   │   ├── src/
 │   │   │   ├── components/
 │   │   │   │   ├── button.tsx
@@ -140,7 +140,7 @@ SendStuff/
 │   │   ├── tailwind.config.js
 │   │   └── tsconfig.json
 │   │
-│   ├── @repo/types/                     # Shared TypeScript types
+│   ├── @sendstuff/types/                     # Shared TypeScript types
 │   │   ├── src/
 │   │   │   ├── api.ts
 │   │   │   ├── user.ts
@@ -149,7 +149,7 @@ SendStuff/
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
-│   ├── @repo/utils/                     # Shared utilities
+│   ├── @sendstuff/utils/                     # Shared utilities
 │   │   ├── src/
 │   │   │   ├── validation.ts
 │   │   │   ├── formatting.ts
@@ -158,8 +158,8 @@ SendStuff/
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
-│   ├── @repo/eslint-config/             # ESLint config
-│   └── @repo/typescript-config/         # TypeScript config
+│   ├── @sendstuff/eslint-config/             # ESLint config
+│   └── @sendstuff/typescript-config/         # TypeScript config
 │
 ├── 🔧 Configuration files
 ├── .env.example                         # Global environment template

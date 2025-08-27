@@ -1,5 +1,5 @@
 {
-    "name": "@repo/database",
+    "name": "@sendstuff/database",
     "version": "1.0.0",
     "description": "SendStuff database package with Prisma schema and client",
     "main": "dist/index.js",

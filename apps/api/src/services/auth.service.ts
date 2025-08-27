@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt'
-import { prisma, UserStatus, UserRole } from '@repo/database'
+import { prisma, UserStatus, UserRole } from '@sendstuff/database'
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt'
 
 export interface RegisterData {

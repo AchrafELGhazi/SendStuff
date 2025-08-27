@@ -10,7 +10,7 @@
         "clean": "rm -rf dist"
     },
     "dependencies": {
-        "@repo/database": "workspace:*",
+        "@sendstuff/database": "workspace:*",
         "express": "^5.1.0",
         "cors": "^2.8.5",
         "helmet": "^8.1.0",
@@ -21,7 +21,7 @@
         "zod": "^4.1.3"
     },
     "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
+        "@sendstuff/typescript-config": "workspace:*",
         "@types/express": "^5.0.3",
         "@types/cors": "^2.8.19",
         "@types/morgan": "^1.9.10",
