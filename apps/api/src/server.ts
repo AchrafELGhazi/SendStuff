@@ -9,12 +9,12 @@ app.listen(PORT, () => {
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
 })
 
-process.on('SIGINT', () => {
-    console.log('\n👋 Shutting down SendStuff API Server...')
-    process.exit(0)
-})
+// process.on('SIGINT', () => {
+//     console.log('\n👋 Shutting down SendStuff API Server...')
+//     process.exit(0)
+// })
 
-process.on('SIGTERM', () => {
-    console.log('\n👋 Shutting down SendStuff API Server...')
-    process.exit(0)
-})
+// process.on('SIGTERM', () => {
+//     console.log('\n👋 Shutting down SendStuff API Server...')
+//     process.exit(0)
+// })
